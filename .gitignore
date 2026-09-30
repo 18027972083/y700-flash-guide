@@ -2,7 +2,6 @@
 *.zip
 # ...but small module packages under modules/ are wanted in git
 !modules/**/*.zip
-!modules/**/*.apk
 *.7z
 *.tgz
 *.img
@@ -22,3 +21,8 @@ segs/
 *.log
 _venv/
 __pycache__/
+
+# module packages built from source (build.sh) — kept in git for direct download;
+# must be the LAST rules so they override the *.zip / *.apk ignores above
+!modules/**/*.zip
+!modules/**/*.apk
