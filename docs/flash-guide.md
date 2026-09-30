@@ -348,6 +348,8 @@ base64 -w0 file | adb shell "base64 -d > /sdcard/file"   # 传完 md5sum 双方�
 
 **修复**：刷入本仓库 [`modules/unpause_charge`](../modules/unpause_charge/)（watchdog 每秒把该属性清 0；可用模块的 **action 按钮立即启动，无需重启**）。运行日志：`/data/local/tmp/unpause_charge.log`。
 
+**修复效果（实测）**：装入后 `persist.sys.pause_charge` 被稳定压在 0，充电恢复——实测电量 19% → 36% 约 1.5 小时（5V/3A 档约 10W，与协商上限一致），`status` 持续为 charging。注意：**系统仍会周期性重设该标志**（约每 3.45 秒一次，采样实测），由 watchdog 逐次清除，因此**模块需保持启用**；卸载模块 = 症状回归。等上游修复 bridge 后方可卸载。
+
 **待上游修复**：bridge 扩展对 `oplus_mutual`、`/proc/charger` 等节点的转接后，此模块即可卸载。触发时刻的外因未完全明确（实测在刷机数小时后开始出现，之后跨重启持续），**任何使用该移植包的设备都可能遇到**。
 
 ---

@@ -25,8 +25,8 @@ y700-flash-guide/
 └── modules/
     ├── tb322fc_identity/     # 混合机型身份 KSU 模块 v1.1（型号→TB322FC 供游戏适配表，
     │                         #   品牌→OnePlus 供小布等品牌校验；改 ro.product.*，可逆）
-    └── unpause_charge/       # 充电暂停修复 KSU 模块（watchdog 对抗移植包的充电保护误触发，
-                              #   见排障手册 Q7；模块 action 按钮可免重启启动）
+    └── unpause_charge/       # 充电暂停修复 KSU 模块（已实测验证：watchdog 对抗移植包的
+                              #   充电保护误触发，见排障手册 Q7；action 按钮可免重启启动）
 ```
 
 ## 脚本用法
