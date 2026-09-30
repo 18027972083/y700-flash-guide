@@ -1,5 +1,8 @@
 # firmware / images / archives — never commit binaries
 *.zip
+# ...but small module packages under modules/ are wanted in git
+!modules/**/*.zip
+!modules/**/*.apk
 *.7z
 *.tgz
 *.img

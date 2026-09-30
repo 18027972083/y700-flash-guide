@@ -1,6 +1,6 @@
 id=tb322fc_identity
 name=Y700 Identity Restore (Hybrid)
-version=v1.1-hybrid
-versionCode=2
+version=v2.0-brandfix
+versionCode=3
 author=ZCode
-description=Hybrid device identity: Lenovo model strings (TB322FC/device) for per-model game graphics profiles + OnePlus brand strings for ColorOS brand-checked services (XiaoBu). Toggle off to fully revert.
+description=Hybrid device identity v2: Lenovo model/device strings for per-model game graphics profiles (Delta Force 144). brand=Lenovo so WeChat accepts the brand-model pair (v1.1's OnePlus+TB322FC was rejected: no WeChat multi-device login). manufacturer stays OnePlus for ColorOS brand-checked services (XiaoBu). Toggle off to fully revert.

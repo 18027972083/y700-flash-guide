@@ -1,11 +1,14 @@
-# Hybrid identity: keep OnePlus brand (for ColorOS services like XiaoBu brand check),
-# restore Lenovo model/device strings (for per-model game graphics profiles, e.g. Delta Force).
+# Hybrid identity v2 (brandfix):
+# - model/device = TB322FC (Lenovo model strings) for per-model game graphics profiles
+# - brand = Lenovo so the brand-model pair is self-consistent (WeChat reads BRAND-MODEL
+#   to derive the device name; "OnePlus-TB322FC" was rejected -> no multi-device login)
+# - manufacturer = OnePlus for ColorOS brand-checked services (XiaoBu BrandEnvActivity)
 ro.product.model=TB322FC
-ro.product.brand=OnePlus
+ro.product.brand=Lenovo
 ro.product.device=TB322FC
 ro.product.manufacturer=OnePlus
 ro.product.name=OP615EL1
 ro.vendor.product.model=TB322FC
-ro.vendor.product.brand=OnePlus
+ro.vendor.product.brand=Lenovo
 ro.vendor.product.device=TB322FC
 ro.vendor.product.name=OP615EL1

@@ -352,6 +352,32 @@ base64 -w0 file | adb shell "base64 -d > /sdcard/file"   # 传完 md5sum 双方�
 
 **待上游修复**：bridge 扩展对 `oplus_mutual`、`/proc/charger` 等节点的转接后，此模块即可卸载。触发时刻的外因未完全明确（实测在刷机数小时后开始出现，之后跨重启持续），**任何使用该移植包的设备都可能遇到**。
 
+### Q8 · 机型身份的三方冲突：微信不能双端 / 小布报「无法兼容」/ 三角洲丢 144 帧
+
+**背景**：本移植包原始身份是 `OPD2413`（一加平板 2 Pro）。为恢复三角洲「144 帧 + 高清」需要把机型改成 `TB322FC`（见阶段 5），但这会连锁触发另两个问题——三个消费者对身份字段的约束互斥：
+
+| 需求方 | 依赖字段 | 要求 | 冲突表现 |
+|---|---|---|---|
+| 三角洲 144+高清 | `ro.product.model`（实测**只认主域**） | `= TB322FC` | model 改回 OPD2413 即丢 144 |
+| 微信 手机+平板双端 | `brand` + `model` 组合自洽（设备名 = "品牌-型号"，服务端校验组合） | `TB322FC` 需配 `Lenovo` | `OnePlus-TB322FC` 被拒 → 不能双端登录 |
+| 小布助手 | `brand` 必须 OPPO 系（heytap `BrandEnvActivity` 品牌校验） | `= OnePlus` | brand=Lenovo 时启动报「无法兼容当前设备」 |
+
+**演进中的失败方案（供参考，别重复踩）**：
+
+| 方案 | brand+model | 微信 | 小布 | 三角洲 |
+|---|---|---|---|---|
+| 混合版 v1.1 | OnePlus + TB322FC | ✗ | ✓ | ✓ |
+| 品牌回退 v2.0 | Lenovo + TB322FC | ✓ | ✗ | ✓ |
+| 域分离 v3.0（TB322FC 藏 vendor/device 域） | OnePlus + OPD2413 | ✓ | ✓ | ✗ |
+
+**最终方案（五项全绿，已实测）**：
+
+1. 身份模块用 [`modules/tb322fc_identity`](../modules/tb322fc_identity/) **v2.0**：`brand=Lenovo` + `model/device=TB322FC` + `manufacturer=OnePlus` → 微信双端 ✓、三角洲 144+高清 ✓
+2. 小布用 [`modules/y700-brandfix-lsposed`](../modules/y700-brandfix-lsposed/)：一个 LSPosed 模块，**仅在 heytap / ColorOS / AIUnit 进程内**把 `Build.BRAND/MANUFACTURER` 伪装为 `OnePlus`（作用域只勾小布系）→ 小布 ✓
+3. 检测环境无新增暴露（作用域外进程感知不到 LSPosed；Momo / Ruru / MemoryDetector 实测全绿）
+
+**通用经验**：机型身份是**多消费者字段**——改机型前先确认每个消费者（游戏适配表、通信 App 的设备验证、厂商服务品牌校验）各自读哪几个字段，再设计"统一主身份 + 进程级隔离"的组合，比单点改字段更稳。
+
 ---
 
 ## 7. 验证方法论（通用，建议保留成脚本）

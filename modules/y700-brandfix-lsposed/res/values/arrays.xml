@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="xposedscope">
+        <item>com.heytap.speechassist</item>
+        <item>com.heytap.cloud</item>
+        <item>com.oplus.aiunit</item>
+        <item>com.coloros.assistantscreen</item>
+    </string-array>
+</resources>
