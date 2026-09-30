@@ -1,0 +1,10 @@
+# Restore real Lenovo Y700 4th Gen identity (values from ZUXOS backup)
+ro.product.model=TB322FC
+ro.product.brand=Lenovo
+ro.product.device=TB322FC
+ro.product.manufacturer=LENOVO
+ro.product.name=TB322FC_PRC
+ro.vendor.product.model=TB322FC
+ro.vendor.product.brand=Lenovo
+ro.vendor.product.device=TB322FC
+ro.vendor.product.name=TB322FC_PRC

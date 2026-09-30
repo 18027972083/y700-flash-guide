@@ -1,0 +1,21 @@
+# firmware / images / archives — never commit binaries
+*.zip
+*.7z
+*.tgz
+*.img
+*.elf
+*.melf
+*.apk
+*.tar
+*.xz
+
+# downloads & segments
+firmware/
+segs/
+*.segs/
+
+# working artifacts
+*.png
+*.log
+_venv/
+__pycache__/

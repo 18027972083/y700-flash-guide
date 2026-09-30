@@ -1,0 +1,338 @@
+# 联想拯救者 Y700 四代（TB322FC）刷 ColorOS 16 移植版 · 完整流程交接文档
+
+> 生成日期：2026-09-30
+> 用途：交接给专门工作区 / 整理发布。本文档为**脱敏版**：不含设备序列号、用户路径、任何固件/工具二进制。
+> 所有固件与第三方工具请从各作者官方渠道获取（见第 8 节链接清单）。
+
+---
+
+## 1. 任务概述
+
+把联想拯救者 Y700 四代（TB322FC，Android 16 / ZUXOS 1.5.10.259）通过 9008（EDL）线刷，刷成从一加平板 2 Pro（OPD2413）移植的 **ColorOS 16.0.8.300**（OPPO Pad Mini UI 适配版），并完成：
+
+1. Bootloader 完整解锁
+2. Root（SUkiSU，LKM 内核模块模式）
+3. 游戏画质/帧率档位恢复（144 帧 + 高清共存）
+4. 屏蔽系统 OTA
+
+最终设备状态：ColorOS 16.0.8.300 正常使用，开机约 25 秒，SUkiSU 管理器显示「工作中」，三角洲 144+高清可用。
+
+---
+
+## 2. 设备与约束（关键前提）
+
+| 项 | 值 |
+|---|---|
+| 机型 | TB322FC（Y700 四代），SM8750（骁龙 8 Elite），16GB+512GB |
+| 屏幕 | 1904x3040（3K），刷新率档位 30/60/90/120/144/**165**Hz（全档全分辨率） |
+| 初始系统 | ZUXOS 1.5.10.259（Android 16） |
+| 初始 BL 状态 | 锁定；**官方 sn.img 解锁与"直刷免解锁镜像"在 .259 上均不可行**（unlock 分区被删、ABL 信任密钥已换为生产密钥） |
+| 唯一可行路径 | 9008（EDL）线刷移植包（覆盖全引导链）+ 专用工具箱解锁 |
+
+**重要结论**：此机型在 .259 版本后，常规玩法（fastboot flashing unlock / 官方解锁申请）全部失效，必须走本文档的 9008 + 工具箱路线。
+
+---
+
+## 3. 硬件与模式操作速查
+
+| 操作 | 按键方法 |
+|---|---|
+| 强制重启 | 长按「电源 + 音量减」 |
+| 关机进 fastboot | 长按「音量加 + 电源」直到出现 fastboot 画面 |
+| 关机直进 9008（EDL） | 完全关机后，**按住音量加，再插入 USB**（不要按电源键） |
+| 系统内进 9008 | `adb reboot bootloader` → `fastboot oem edl`（锁定状态也有效） |
+| 系统内进 fastboot | `adb reboot bootloader` |
+| 工具流程中进 9008 | 按住音量加不松手，工具触发重启，黑屏瞬间松其他键只留音量加 |
+
+**USB 口**：务必使用平板**长边**的 USB 口；数据线用原装。
+
+**9008 确认**：设备管理器出现 `Qualcomm HS-USB QDLoader 9008 (COMx)`；`qdl.exe list` 显示 `05c6:9008`。
+
+---
+
+## 4. 完整流程（分阶段）
+
+### 阶段 0 · 素材与工具准备
+
+| 素材 | 用途 | 获取方式（见第 8 节链接） |
+|---|---|---|
+| ColorOS 16.0.8.300 移植包（单 zip，约 8.3GB） | 主体刷机包（QDL/EDL 格式，含 images/、tools/qdl/、root/、modules/） | 移植作者 123 网盘 |
+| 刷机匣、xbl_s_devprg_ns.melf、免解锁 root 镜像包 | 辅助工具与 root 载荷 | UP 主迅雷网盘 |
+| 解锁工具箱（"联想拯救者Y700四代工具箱"） | **解锁 BL 专用**（含 abl_unlock.img、devprg、frp 修补、sn 生成） | 玩机资源百度网盘 |
+| QDL v2.7（Windows x64） | 9008 刷写工具 | 移植包内 `tools/qdl/` 自带 |
+| adb / fastboot | 设备通信 | Google platform-tools |
+| avbtool.py + AOSP testkey_rsa4096.pem | 修复/重签 vbmeta 用（阶段 2） | AOSP / LineageOS 镜像仓库（公钥私钥均为公开测试密钥） |
+| 官方救砖包（ZUXOS，任选版本） | 回滚保底 | lolinet 镜像站 / 玩机资源网盘 |
+
+**电脑环境检查**：
+- 安装高通 QUD 驱动（或系统已带 Qualcomm HS-USB 驱动，通常 LTBox/刷机工具会装）
+- 关闭休眠；只用一条数据线连接设备
+
+### 阶段 1 · 9008 线刷移植包
+
+> 原包内含作者操作手册 `AGENTS.md`，**以它为准**。以下为实测流程。
+
+1. **解压移植包**（约 25GB 解压后），核对 `SHA256SUMS.txt`：
+   ```bash
+   # 全包逐文件校验（Python 脚本，见工具集 check_sha256.py）
+   python check_sha256.py   # 111/111 文件全部一致才算通过
+   ```
+2. **QDL dry-run 预验证**（不读设备，仅解析 XML 与文件引用）：
+   ```bash
+   qdl.exe --dry-run images/prog_firehose_ddr.elf \
+     images/rawprogram0.xml images/rawprogram1.xml images/rawprogram2.xml \
+     images/rawprogram3.xml images/rawprogram4.xml images/rawprogram5.xml \
+     images/patch0.xml images/patch1.xml images/patch2.xml \
+     images/patch3.xml images/patch4.xml images/patch5.xml
+   # 必须以状态码 0 退出且无缺文件
+   ```
+3. **进 9008**：`adb reboot bootloader` → `fastboot devices` 确认 → `fastboot oem edl`
+4. **清数据**（从官方系统跨厂商必须清；`-R` 保持 Firehose 会话不复位）：
+   ```bash
+   qdl.exe -R images/prog_firehose_ddr.elf erase 0/metadata erase 0/userdata
+   ```
+5. **立即完整刷写**（不带 `-R`，完成后自动复位；约 12 分钟 / 25GB）：
+   ```bash
+   qdl.exe images/prog_firehose_ddr.elf \
+     images/rawprogram0.xml images/rawprogram1.xml images/rawprogram2.xml \
+     images/rawprogram3.xml images/rawprogram4.xml images/rawprogram5.xml \
+     images/patch0.xml images/patch1.xml images/patch2.xml \
+     images/patch3.xml images/patch4.xml images/patch5.xml
+   # 成功标志：flashed 逐条成功、78 patches applied、partition 1 is now bootable、EXIT=0
+   ```
+6. **等待重启**：首启较慢；若卡住见阶段 2。
+
+### 阶段 2 · 启动失败诊断与修复（★ 本项目的核心坑）
+
+**症状**：刷写全部成功（101 个分区 + 78 patch），但设备反复回到 fastboot，`fastboot getvar all` 显示 `slot-unbootable:a: yes`、`slot-retry-count:a: 6`（6 次启动失败耗尽）。
+
+**诊断路径（方法论，可复用于任何 QDL 刷机排障）**：
+
+1. **读回设备分区与包内文件对比**（证明写入完整性）：
+   ```bash
+   qdl.exe images/prog_firehose_ddr.elf read 4/113318+24576 rb_boot_a.img   # 分区按 GPT 查 LBA
+   # 对 boot/dtbo/vendor_boot/recovery/init_boot/pvmfw/super(23.6GB)/vbmeta 逐一 SHA256 对比
+   ```
+   → 本案例**全部一致**，排除写入问题。
+2. **读 ABL 日志**（`logfs` 分区，8MB，LUN4）：
+   ```bash
+   qdl.exe images/prog_firehose_ddr.elf read 4/logfs rb_logfs.img
+   ```
+   → 日志显示每次启动都走到 `VB2: boot state: orange(1)` + `BootLinux` + `Start EBS`（ExitBootServices）——**引导链正常，失败发生在内核跳转之后**，且 `pstoredump` 分区全零（内核无 panic）。
+3. **用 avbtool 解析 vbmeta 的 descriptor 并与实际镜像哈希比对**（关键步骤）：
+   ```bash
+   python avbtool.py info_image --image images/vbmeta.img
+   # 逐条 hash descriptor 手动验证：SHA256(salt || image[0:image_size]) == digest ?
+   ```
+   → **发现根因**：`vendor_boot.img`（2026-09-24 更新版，15765504 字节）与 `vbmeta.img` 中记录的旧描述符（15568896 字节）**不同步** → AVB 校验必然失败。这是该移植包发布版本的一个构建缺陷（更新 vendor_boot 后未重签 vbmeta）。
+
+**修复方法（用公开的 AOSP 测试密钥重签 vbmeta）**：
+
+> 该包的 vbmeta 本来就用 AOSP 测试密钥（公钥 SHA1 `2597c218aae470a130f61162feaae70afd97f011`）签名，私钥为公开测试密钥，可直接复用。
+
+```bash
+# 1. 获取测试密钥（LineageOS 镜像仓库：android_external_avb 的 test/data/testkey_rsa4096.pem）
+# 2. 导出公钥（用于 chain partition）
+python avbtool.py extract_public_key --key testkey_rsa4096.pem --output testkey.avbpubkey
+# 3. 重建 vbmeta：保留全部 chain（boot/recovery/vbmeta_system）+ hash 描述符（dtbo/init_boot/vendor_boot）
+python avbtool.py make_vbmeta_image \
+  --output vbmeta_fixed.img --key testkey_rsa4096.pem --algorithm SHA256_RSA4096 \
+  --rollback_index 0 --rollback_index_location 0 --flags 0 --padding_size 65536 \
+  --chain_partition boot:3:testkey.avbpubkey \
+  --chain_partition recovery:1:testkey.avbpubkey \
+  --chain_partition vbmeta_system:2:testkey.avbpubkey \
+  --include_descriptors_from_image images/dtbo.img \
+  --include_descriptors_from_image images/init_boot.img \
+  --include_descriptors_from_image images/vendor_boot.img
+# 4. 9008 写回双槽（自建 XML：vbmeta_a@LUN4 sector 137946、vbmeta_b@LUN4 sector 346452，各 16 扇区）
+qdl.exe images/prog_firehose_ddr.elf rawprogram_vbmeta_fix.xml
+```
+
+**注意**：修好 vbmeta 后设备**仍然**卡 fastboot——因为 A 槽的"不可启动"状态存在**RPMB（防篡改安全存储）**里（ABL 日志：`VB: RWDeviceState: Succeed using rpmb!`），清 misc / UEFI 变量均无效，QDL 也无法直接改。**必须通过阶段 3 的解锁来重置**。
+
+### 阶段 3 · 完整解锁 BL（专用的第三方工具箱）
+
+**联想解锁的真实机制**（与 AOSP 标准不同，`fastboot flashing unlock` 命令已被联想从 bootloader 中移除，`get_unlock_ability=1` 也不代表可以直接解锁）：
+
+```
+1) 9008 下：备份 abl/frp → 刷入"解锁版 abl"（abl_unlock.img）→ 修补 frp 分区强开 OEM 解锁
+2) 重启到 fastboot：工具箱读取设备 Bootloader_SN 生成定制 sn.img →
+   fastboot flash unlock sn.img → fastboot oem unlock-go
+3) 设备出现解锁确认界面 → 音量键选 UNLOCK → 电源键确认（会清数据）
+4) 再次进 9008：恢复原版 abl（工具箱自动完成）→ 重启
+```
+
+**实测过程**（使用"联想拯救者Y700四代工具箱"bat 交互流程）：
+
+1. 平板连接电脑，确保在 **fastboot** 或系统模式
+2. 运行工具箱 → 选「1. 解锁BL」→ 按提示：
+   - **按住平板音量加不松手** → 电脑按任意键 → 设备进入 9008
+   - 工具自动：备份 abl/frp → 刷解锁版 abl → 修补 frp
+   - 重启到 fastboot → 工具自动读 SN、生成解锁文件、执行解锁命令
+   - **平板出现解锁确认界面 → 选 UNLOCK THE BOOTLOADER → 电源键确认**
+   - 设备重启后，按提示**再进一次 9008**（按住音量加），工具恢复原版 abl
+3. **验证**：`fastboot getvar unlocked` → `yes`
+
+**⚠️ 关键补充（本案例教训）**：工具箱在"等待 9008"步骤偶发检测卡住（USB 枚举残留）。此时**不要慌**——手动完成等价操作：
+- 解锁确认后设备处于 fastboot，先验证 `unlocked: yes`（可能已生效，无确认界面直接生效）
+- 若工具卡住：用 `qdl write` 手动恢复备份的 abl（工具箱 `bin/bak/` 下有自动备份）
+- 工具箱的 frp 备份是"修补前"的，**不要恢复 frp**（会撤销解锁强开），只恢复 abl
+
+**解锁后立即重置槽位状态（★ 让设备能启动的关键一步）**：
+```bash
+fastboot --set-active=a      # 解锁前此命令被拒（Lock State），解锁后可用
+# 效果：slot-unbootable:a 从 yes → no，slot-retry-count:a 从 6 → 7
+fastboot reboot
+```
+→ 实测设备 15 秒后进入系统。**至此 ColorOS 首次成功启动。**
+
+**为什么需要解锁才能启动（本案例的完整因果链）**：
+安装包的 vbmeta 用 AOSP 测试密钥签名，需设备处于"接受测试密钥"状态；且 6 次失败计数固着在 RPMB 里、常规手段无法清除——解锁流程（清数据 + 重置 bootloader 状态）是唯一出路。**这也解释了"免解锁方案"为何在部分设备上失败**：引导链本身能通过（orange），但失败计数无法自行恢复。
+
+### 阶段 4 · Root（SUkiSU，LKM 模式）
+
+**素材**：SUkiSU LKM 包（`init_boot.img` + `vbmeta.img` + `SukiSU APK`），来自 UP 主"免解锁镜像"合集。
+
+**★ 关键坑（与阶段 2 同源）**：SUkiSU 自带的 `vbmeta.img` 是 7 月构建，其 `vendor_boot` 描述符对应旧版镜像——**直接刷会导致 AVB 再次失败**。必须**自行重签 vbmeta**：
+
+```bash
+# 用 AOSP 测试密钥 + SUkiSU 的 init_boot 描述符 + 当前 vendor_boot/dtbo 描述符重建
+python avbtool.py make_vbmeta_image \
+  --output vbmeta_suki.img --key testkey_rsa4096.pem --algorithm SHA256_RSA4096 \
+  --rollback_index 0 --rollback_index_location 0 --flags 0 --padding_size 65536 \
+  --chain_partition boot:3:testkey.avbpubkey \
+  --chain_partition recovery:1:testkey.avbpubkey \
+  --chain_partition vbmeta_system:2:testkey.avbpubkey \
+  --include_descriptors_from_image images/dtbo.img \
+  --include_descriptors_from_image suki_init_boot.img \
+  --include_descriptors_from_image images/vendor_boot.img
+```
+
+**刷入（已解锁，直接 fastboot）**：
+```bash
+fastboot flash init_boot_a init_boot.img   # SUkiSU 版
+fastboot flash init_boot_b init_boot.img
+fastboot flash vbmeta_a vbmeta_suki.img    # 自签版
+fastboot flash vbmeta_b vbmeta_suki.img
+fastboot reboot
+# 装管理器
+adb install SukiSU_v4.1.3_40796-release.apk
+```
+
+**验证**：打开 SukiSU 管理器 → 主页显示「**工作中 \<LKM\>**」即成功（内核模块已加载）。模块页面为空是正常的。
+
+> 备注：SUkiSU 的 su 命令行（adb shell su）在 LKM 模式下不落盘（无 /system/bin/su），不影响使用——所有 root 功能通过管理器授权体系工作（MT 管理器等 App 首次执行 root 操作时会在管理器弹授权）。
+
+### 阶段 5 · 三角洲 144 帧 + 高清画质恢复（机型适配表问题）
+
+**现象**：刷机前（ZUXOS）三角洲可选「144 帧 + 高清画质」；刷 ColorOS 后，**选 144 帧画质被强制降到"流畅"，想用"高清"则被强制回 120 帧**——两者互斥。
+
+**诊断（排除法）**：
+```bash
+adb shell dumpsys display | grep -E "supportedRefreshRates|DisplayModeRecord"
+```
+→ 显示模式表全部 1904x3040 全分辨率，144Hz/165Hz 档齐全——**排除“高刷降分辨率”假设**。
+
+**根因**：腾讯系游戏（含三角洲）按**机型**下发画质-帧率组合适配表：
+- 刷机前机型 = `TB322FC`（Y700 四代）→ 适配表：**144 + 高清**（该机型官方适配 144 帧）
+- 刷机后机型 = `OPD2413`（一加平板 2 Pro，移植系统身份）→ 适配表：144 只配"流畅"
+
+**修复：恢复真实机型身份（最小 KSU 模块）**
+
+自制 `tb322fc_identity` 模块（`module.prop` + `system.prop`）：
+```ini
+# system.prop（值取自 ZUXOS 时代的 getprop 备份，不编造）
+ro.product.model=TB322FC
+ro.product.brand=Lenovo
+ro.product.device=TB322FC
+ro.product.manufacturer=LENOVO
+ro.product.name=TB322FC_PRC
+ro.vendor.product.model=TB322FC
+ro.vendor.product.brand=Lenovo
+ro.vendor.product.device=TB322FC
+ro.vendor.product.name=TB322FC_PRC
+```
+```ini
+# module.prop
+id=tb322fc_identity
+name=Y700 Identity Restore (TB322FC)
+version=v1.0
+versionCode=1
+description=Restore real Lenovo TB322FC identity (standard ro.product.* only) for per-model game graphics profiles. Toggle off to revert.
+```
+
+**安装与生效**：SukiSU 刷入模块 → 重启 → `getprop ro.product.model` 确认 = TB322FC → **清三角洲缓存**（清数据更彻底）促使其重拉适配表 → 进游戏：**144 + 高清恢复** ✅
+
+**为什么安全**：
+- 只改标准 `ro.product.*` 属性；ColorOS 的私有身份体系（移植作者建的"项目号 25928"路径，供 OPPO 私有 HAL/UI 读取）**不受影响**（两套并存）
+- `ro.build.fingerprint` 保持 OPD2413 不动（避免 model 与指纹不一致的交叉特征）
+- 模块开关即还原，完全可逆
+
+---
+
+## 5. 关键技术发现汇总
+
+1. **移植包构建缺陷**：发布版 `vendor_boot.img`（9-24 更新）与 `vbmeta.img`（记录旧哈希）不同步 → AVB 校验必败。**任何刷该包者都会遇到**，修复方法见阶段 2。建议向包作者反馈。
+2. **RPMB 启动状态**：A/B 槽的"启动失败计数/不可启动"标记存于 RPMB 安全存储（`VB: RWDeviceState ... rpmb`），misc/UEFI 变量/UEFI 全清零均**无效**；唯一重置途径 = 完整解锁流程。
+3. **联想解锁机制**：标准 `fastboot flashing unlock` 已被移除；实际路径 = 刷解锁版 abl + frp 强开 + SN 定制 sn.img + `fastboot flash unlock` + `oem unlock-go` + 确认界面 + 恢复 abl。只解锁 critical（`unlock_critical`）**不会**获得刷写权限。
+4. **vbmeta "chain partition" 结构**：boot/recovery/vbmeta_system 为链式分区（各自有带签名的 footer）；dtbo/init_boot/vendor_boot 为 vbmeta 内的 hash 描述符。修复时**两者都要与当前实际镜像匹配**。
+5. **机型适配表**：国产游戏画质/帧率档随"机型字符串"变化。移植系统改机型（system.prop）是恢复游戏适配的通用手法。
+6. **adb push 异常**（本机环境）：push 报成功但文件不落地；**base64 管道**是可靠替代：
+   ```bash
+   base64 -w0 file | adb shell "base64 -d > /sdcard/file"   # 传完 md5sum 双方校验
+   ```
+
+---
+
+## 6. 验证方法论（通用，建议保留成脚本）
+
+| 方法 | 用途 |
+|---|---|
+| `SHA256SUMS.txt` + 逐文件校验脚本 | 刷机包完整性（本案例 111/111 通过） |
+| `qdl --dry-run` | XML 与镜像引用预验证（不碰设备） |
+| `qdl read` + 分区读回 SHA256 对比 | 证明写入正确（排障第一课） |
+| `avbtool info_image` + 手工哈希验证 | 定位 AVB 描述符与实际镜像不匹配 |
+| `fastboot getvar all` | 槽位/锁/分区表全面状态快照 |
+| `dumpsys display` | 显示模式表（分辨率/刷新率）诊断 |
+| logfs / pstoredump 读取 | ABL 日志 / 内核崩溃日志（均可用 QDL read） |
+
+---
+
+## 7. 回滚到官方系统（保底方案）
+
+1. 获取官方固件（ZUXOS 1.5.10.259 或 1.1.11.263 等完整包，约 9.5GB，含 QDL 线刷文件）
+2. 9008 模式 → QDL 同流程刷写（rawprogram/patch XML 为官方包自带）
+3. 官方包刷回后，官方签名链自洽，可直接启动；如需重新锁定 BL 用 `fastboot flashing lock`（会清数据）
+
+**刷回官方后注意**：A/B 槽状态、vmeta 均为官方版本；root 与模块全部消失。
+
+---
+
+## 8. 素材与工具官方渠道（不打包二进制）
+
+| 内容 | 渠道 |
+|---|---|
+| ColorOS 16 移植包（含作者手册、QDL 工具、root 载荷） | 移植作者 Aptx5497 B 站视频简介的 123 网盘链接（BV1b5N36cEZa） |
+| 刷机教程 / 工具（刷机匣、melf、免解锁 root 镜像） | UP 主"悲伤的压缩包"B 站视频（BV1NcTp64E6M）迅雷网盘 |
+| 解锁工具箱 / 玩机资源 | 同 UP 主：腾讯文档《玩机更新资源教程》（公众号"悲伤压缩包"→玩机教程菜单获取）中的百度网盘合集 |
+| MT 管理器 | 官网 mt.cc |
+| adb/fastboot | Google platform-tools（developer.android.com） |
+| avbtool + AOSP 测试密钥 | AOSP external/avb（或镜像仓库 android_external_avb）的 `avbtool.py` 与 `test/data/testkey_rsa4096.pem` |
+| LTBox（EDL 工具，备用） | 作者发布页（GitHub：某贼/LTBox 相关仓库） |
+| 官方固件 | mirrors.lolinet.com（lenowow/2025/Y700_4th_Gen/TB322FC_CN/）或联想 OTA 接口 |
+
+---
+
+## 9. 移植系统已知降级（作者文档明示）
+
+- 系统 OTA 被屏蔽（组件级禁用，更新需重刷本项目包）
+- 热点仅 2.4G
+- 蓝牙编解码仅 AAC
+- 色彩调节无效
+- "查找"定位功能不可用
+
+---
+
+## 10. 免责声明
+
+本文档仅供个人学习与技术研究。所有固件、工具、模块的版权归各自作者/厂商所有，请通过官方渠道获取并遵守其许可条款（多个工具明确标注"禁止倒卖"）。刷机有风险（变砖、数据丢失、保修失效），操作前务必备份数据并理解每一步作用。因使用本文档造成的任何后果由操作者自行承担。
