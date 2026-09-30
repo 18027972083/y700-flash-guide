@@ -1,10 +1,11 @@
-# Restore real Lenovo Y700 4th Gen identity (values from ZUXOS backup)
+# Hybrid identity: keep OnePlus brand (for ColorOS services like XiaoBu brand check),
+# restore Lenovo model/device strings (for per-model game graphics profiles, e.g. Delta Force).
 ro.product.model=TB322FC
-ro.product.brand=Lenovo
+ro.product.brand=OnePlus
 ro.product.device=TB322FC
-ro.product.manufacturer=LENOVO
-ro.product.name=TB322FC_PRC
+ro.product.manufacturer=OnePlus
+ro.product.name=OP615EL1
 ro.vendor.product.model=TB322FC
-ro.vendor.product.brand=Lenovo
+ro.vendor.product.brand=OnePlus
 ro.vendor.product.device=TB322FC
-ro.vendor.product.name=TB322FC_PRC
+ro.vendor.product.name=OP615EL1

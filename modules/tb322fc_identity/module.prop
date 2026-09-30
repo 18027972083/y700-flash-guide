@@ -1,6 +1,6 @@
 id=tb322fc_identity
-name=Y700 Identity Restore (TB322FC)
-version=v1.0
-versionCode=1
+name=Y700 Identity Restore (Hybrid)
+version=v1.1-hybrid
+versionCode=2
 author=ZCode
-description=Restore the real Lenovo TB322FC device identity (standard ro.product.* only) so games with per-model graphics profiles (e.g. Delta Force) use the Y700 4th Gen profile. Toggle off to revert. ColorOS private identity (project 25928) is untouched.
+description=Hybrid device identity: Lenovo model strings (TB322FC/device) for per-model game graphics profiles + OnePlus brand strings for ColorOS brand-checked services (XiaoBu). Toggle off to fully revert.

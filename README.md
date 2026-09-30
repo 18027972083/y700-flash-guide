@@ -17,13 +17,14 @@ TB322FC 在 ZUXOS 1.5.10.259 之后常规解锁路径全部失效（unlock 分�
 y700-flash-guide/
 ├── docs/
 │   └── flash-guide.md        # 推荐流程 + 排障手册（脱敏版）：
-│                             #   阶段 0-5 干净流程，实测踩坑集中在第 6 节 Q1-Q5
+│                             #   阶段 0-5 干净流程，实测踩坑集中在第 6 节 Q1-Q6
 ├── scripts/                  # 自研脚本，纯标准库，无第三方依赖
 │   ├── check_sha256.py       # 对照 SHA256SUMS.txt 全包校验（支持 zip 免解压、断点续算）
 │   ├── verify_vbmeta.py      # 解析 AVB 描述符并逐条对实际镜像验哈希（排障核心）
 │   └── dl_official.py        # 大文件分段并行下载（Range + 断点续传 + 尺寸校验）
 └── modules/
-    └── tb322fc_identity/     # 恢复真实机型身份的最小 KSU 模块（改 ro.product.*，可逆）
+    └── tb322fc_identity/     # 混合机型身份 KSU 模块 v1.1（型号→TB322FC 供游戏适配表，
+                              #   品牌→OnePlus 供小布等品牌校验；改 ro.product.*，可逆）
 ```
 
 ## 脚本用法

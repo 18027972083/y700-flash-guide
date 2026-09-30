@@ -218,33 +218,41 @@ adb install SukiSU_v4.1.3_40796-release.apk
 
 （排除法确认过显示模式表正常：`adb shell dumpsys display | grep -E "supportedRefreshRates|DisplayModeRecord"` 显示 1904x3040 全分辨率、144/165Hz 档齐全。）
 
-**修复：恢复真实机型身份（最小 KSU 模块）**
+**修复：混合机型身份（最小 KSU 模块）**
 
-自制 `tb322fc_identity` 模块（`module.prop` + `system.prop`，见本仓库 `modules/`）：
+> ⚠️ 先划重点：**不能把品牌字段也改成联想**——会导致 ColorOS 品牌校验类服务拒绝服务（小布助手报「无法兼容当前设备」，见下方“品牌校验服务兼容”）。
+
+自制 `tb322fc_identity` 模块（v1.1 混合身份，见本仓库 `modules/`）：
 
 ```ini
-# system.prop（值取自 ZUXOS 时代的 getprop 备份，不编造）
+# system.prop —— 型号字段交给游戏适配表匹配，品牌字段保留一加给品牌校验服务
 ro.product.model=TB322FC
-ro.product.brand=Lenovo
 ro.product.device=TB322FC
-ro.product.manufacturer=LENOVO
-ro.product.name=TB322FC_PRC
 ro.vendor.product.model=TB322FC
-ro.vendor.product.brand=Lenovo
 ro.vendor.product.device=TB322FC
-ro.vendor.product.name=TB322FC_PRC
+ro.product.brand=OnePlus
+ro.product.manufacturer=OnePlus
+ro.vendor.product.brand=OnePlus
+ro.product.name=OP615EL1
+ro.vendor.product.name=OP615EL1
 ```
 
 ```ini
 # module.prop
 id=tb322fc_identity
-name=Y700 Identity Restore (TB322FC)
-version=v1.0
-versionCode=1
-description=Restore real Lenovo TB322FC identity (standard ro.product.* only) for per-model game graphics profiles. Toggle off to revert.
+name=Y700 Identity Restore (Hybrid)
+version=v1.1-hybrid
+versionCode=2
+description=Hybrid device identity: Lenovo model strings for per-model game graphics profiles + OnePlus brand strings for ColorOS brand-checked services (XiaoBu). Toggle off to revert.
 ```
 
-**安装与生效**：SukiSU 刷入模块 → 重启 → `getprop ro.product.model` 确认 = TB322FC → **清三角洲缓存**（清数据更彻底）促使其重拉适配表 → 进游戏：**144 + 高清恢复** ✅
+**安装与生效**：SukiSU 刷入模块 → 重启 → `getprop ro.product.model` 确认 = `TB322FC`（brand 显示 OnePlus）→ **清三角洲缓存**（清数据更彻底）促使其重拉适配表 → 进游戏：**144 + 高清恢复** ✅
+
+**★ 品牌校验服务的兼容（实践踩坑，v1.1 的由来）**：
+
+如果把品牌字段一并改成 `Lenovo/LENOVO`，**小布助手启动会报「“小布助手”为定制应用，无法兼容当前设备」**——heytap 的 `BrandEnvActivity` 品牌环境校验读 `brand/manufacturer` 判定“非 OPPO 系设备”直接拒绝服务。
+解决 = **混合身份**：**只动 model/device（游戏适配表匹配的字段），brand/manufacturer 保留一加**。
+**通用经验**：今后为任何目的改机型时，只动 model/device，可避免 ColorOS 品牌校验类服务（小布、云服务、主题商店等）拒绝服务。
 
 **为什么安全**：
 
@@ -316,6 +324,12 @@ base64 -w0 file | adb shell "base64 -d > /sdcard/file"   # 传完 md5sum 双方�
 - 确认 `getprop ro.product.model` = `TB322FC`（模块是否生效）
 - **清三角洲缓存/数据**促使游戏重拉适配表（这一步不能省）
 - 冷启动游戏再看选项
+
+### Q6 · 小布助手报「"小布助手"为定制应用，无法兼容当前设备」
+
+机型模块把 `brand/manufacturer` 也改成了联想 → heytap `BrandEnvActivity` 品牌校验拒绝服务。
+解决：用本仓库 v1.1 混合身份模块（型号字段 TB322FC + 品牌字段 OnePlus），覆盖安装后重启即可。详见阶段 5 的「品牌校验服务的兼容」。
+通用原则：**改机型只动 model/device，不动 brand/manufacturer**。
 
 ---
 
