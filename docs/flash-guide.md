@@ -331,6 +331,25 @@ base64 -w0 file | adb shell "base64 -d > /sdcard/file"   # 传完 md5sum 双方�
 解决：用本仓库 v1.1 混合身份模块（型号字段 TB322FC + 品牌字段 OnePlus），覆盖安装后重启即可。详见阶段 5 的「品牌校验服务的兼容」。
 通用原则：**改机型只动 model/device，不动 brand/manufacturer**。
 
+### Q7 · 插充电器 1~3 秒即停充（电量只降不升，重启/换充电器均无效）
+
+**症状**：任意充电器（含高功率 PD 头）插上后系统短暂显示充电，1~3 秒后中止；`dumpsys battery` 的 `status` 长期为 4（未充电），电量持续下降。重启、换充电器/线、关闭全部 KSU 模块均无效。设置里的旁路充电、智能充电、充电保护都是关闭/未触发状态——**设置层看起来一切正常正是它难查的原因**。
+
+**根因**：移植包对 OPLUS 充电通信节点的 bridge 覆盖不全，充电子系统持续报错并触发"暂停充电"保护，周期性把 `persist.sys.pause_charge` 置 1（实测约每 3.45 秒一次，跨重启持续）。日志中可直接看到这些缺失：
+
+| 缺失节点 | 报错者 | 频率 |
+|---|---|---|
+| `/sys/class/oplus_mutual/cmd` | charger HAL（logcat tag `chg_exchange_mesg`） | 每秒级 |
+| `/proc/charger/*` | power stats HAL | 每 ~20-30 秒 |
+| `/proc/wireless/enable_tx` | 充电信息更新线程 | 每次刷新 |
+| SOH 相关文件（`chg_exchange_soh_mesg`） | charger HAL | 每 ~45-90 秒 |
+
+**诊断一行**：`adb shell getprop persist.sys.pause_charge` 返回 **1** 即命中（注意：设置层的 `settings get system bypass_charge_state` 会是 0——两者是不同机制，不冲突；这就是它骗过所有常规排查的原因）。
+
+**修复**：刷入本仓库 [`modules/unpause_charge`](../modules/unpause_charge/)（watchdog 每秒把该属性清 0；可用模块的 **action 按钮立即启动，无需重启**）。运行日志：`/data/local/tmp/unpause_charge.log`。
+
+**待上游修复**：bridge 扩展对 `oplus_mutual`、`/proc/charger` 等节点的转接后，此模块即可卸载。触发时刻的外因未完全明确（实测在刷机数小时后开始出现，之后跨重启持续），**任何使用该移植包的设备都可能遇到**。
+
 ---
 
 ## 7. 验证方法论（通用，建议保留成脚本）

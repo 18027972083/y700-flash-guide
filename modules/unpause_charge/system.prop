@@ -1,0 +1,4 @@
+# Clears the latched "suspend charging" flag (blocks any charger 1-3s after plug).
+# Loaded by KernelSU's system.prop mechanism on every boot - same mechanism as
+# the identity module, verified working on this device.
+persist.sys.pause_charge=0

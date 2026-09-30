@@ -1,0 +1,6 @@
+id=unpause_charge
+name=Charge Pause Fix (FP8300 port)
+version=v3.0-persistent
+versionCode=4
+author=ZCode
+description=Persistent watchdog: a system service on this port re-sets persist.sys.pause_charge=1 every ~2-3 seconds, which suspends charging. The watchdog clears it every second. Press the module ACTION button to start it immediately (no reboot needed); it also auto-starts on boot. Log: /data/local/tmp/unpause_charge.log
