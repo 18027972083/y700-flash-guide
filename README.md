@@ -23,12 +23,12 @@ y700-flash-guide/
 │   ├── verify_vbmeta.py      # 解析 AVB 描述符并逐条对实际镜像验哈希（排障核心）
 │   └── dl_official.py        # 大文件分段并行下载（Range + 断点续传 + 尺寸校验）
 └── modules/
-    ├── tb322fc_identity/     # 混合机型身份 KSU 模块 v2.0（Lenovo-TB322FC 保微信双端
-    │                         #   与三角洲 144；避免 brand/model 组合被服务端拒绝）
+    ├── tb322fc_identity/     # 混合机型身份 KSU 模块 v3.1（brand=OnePlus 过 heytap 品牌
+    │                         #   白名单 + model/device=TB322FC 保三角洲 144；微信双端实测正常）
     ├── unpause_charge/       # 充电暂停修复 KSU 模块（已实测验证：watchdog 对抗移植包的
     │                         #   充电保护误触发，见排障手册 Q7；action 按钮可免重启启动）
     └── y700-brandfix-lsposed/# LSPosed 小布品牌伪装模块（源码 + 构建脚本 + 预编译 APK；
-                              #   仅在 heytap 系进程内伪装 brand=OnePlus，见 Q8）
+                              #   v3.1 身份下已冗余，仅回退 v2.x 联想身份时使用，见 Q8）
 ```
 
 ## 脚本用法

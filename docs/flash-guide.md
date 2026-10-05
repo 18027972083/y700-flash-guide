@@ -248,11 +248,11 @@ description=Hybrid device identity: Lenovo model strings for per-model game grap
 
 **安装与生效**：SukiSU 刷入模块 → 重启 → `getprop ro.product.model` 确认 = `TB322FC`（brand 显示 OnePlus）→ **清三角洲缓存**（清数据更彻底）促使其重拉适配表 → 进游戏：**144 + 高清恢复** ✅
 
-**★ 品牌校验服务的兼容（实践踩坑，v1.1 的由来）**：
+**★ 品牌校验服务的兼容（最终定稿 = v3.1）**：
 
-如果把品牌字段一并改成 `Lenovo/LENOVO`，**小布助手启动会报「“小布助手”为定制应用，无法兼容当前设备」**——heytap 的 `BrandEnvActivity` 品牌环境校验读 `brand/manufacturer` 判定“非 OPPO 系设备”直接拒绝服务。
-解决 = **混合身份**：**只动 model/device（游戏适配表匹配的字段），brand/manufacturer 保留一加**。
-**通用经验**：今后为任何目的改机型时，只动 model/device，可避免 ColorOS 品牌校验类服务（小布、云服务、主题商店等）拒绝服务。
+品牌字段**必须**保留一加系（`OnePlus`）。heytap `BrandEnvSdk` 的白名单经反编译实测：`MD5(Build.BRAND.toUpperCase())` 必须命中 `OPPO` / `REALME` / `ONEPLUS` 三者之一，否则小布、主题商店、音乐、视频、阅读、浏览器、OPPO 商城、我的一加等整套 ColorOS 应用都会报「为定制应用，无法兼容当前设备」（机制与排查见排障手册 **Q8**）。
+最终组合 = `brand/manufacturer=OnePlus` + `model/device=TB322FC`（即下面 v1.1 组合，模块定稿 **v3.1**）：2026-10-05 实测八应用全部恢复、微信双端 / 小布 / 三角洲 144+高清均正常。
+**通用经验**：ColorOS 系设备改机型，品牌字段保持白名单内（OPPO 系）是硬约束；只调 model/device 满足游戏适配表即可。
 
 **为什么安全**：
 
@@ -325,11 +325,11 @@ base64 -w0 file | adb shell "base64 -d > /sdcard/file"   # 传完 md5sum 双方�
 - **清三角洲缓存/数据**促使游戏重拉适配表（这一步不能省）
 - 冷启动游戏再看选项
 
-### Q6 · 小布助手报「"小布助手"为定制应用，无法兼容当前设备」
+### Q6 · heytap 系应用报「"XX"为定制应用，无法兼容当前设备」（小布 / 主题商店 / 音乐 / 视频 / 阅读 / 浏览器 / OPPO 商城 / 我的一加）
 
-机型模块把 `brand/manufacturer` 也改成了联想 → heytap `BrandEnvActivity` 品牌校验拒绝服务。
-解决：用本仓库 v1.1 混合身份模块（型号字段 TB322FC + 品牌字段 OnePlus），覆盖安装后重启即可。详见阶段 5 的「品牌校验服务的兼容」。
-通用原则：**改机型只动 model/device，不动 brand/manufacturer**。
+`brand` 不在 heytap `BrandEnvSdk` 白名单（OPPO / REALME / ONEPLUS，MD5 校验；反向确认过 MD5 常量）时，整套 ColorOS 应用拒绝服务。
+解决：身份模块的 `brand/manufacturer` 保持 `OnePlus`（本仓库 v3.1 模块即定稿组合 `brand=OnePlus + model/device=TB322FC`），覆盖安装后**重启**（`Build.BRAND` 走 zygote 启动缓存，必须整机重启）。机制与排查详见 **Q8**。
+通用原则：**改机型只动 model/device，品牌字段保持 OPPO 系（白名单内）不动**。
 
 ### Q7 · 插充电器 1~3 秒即停充（电量只降不升，重启/换充电器均无效）
 
@@ -352,31 +352,55 @@ base64 -w0 file | adb shell "base64 -d > /sdcard/file"   # 传完 md5sum 双方�
 
 **待上游修复**：bridge 扩展对 `oplus_mutual`、`/proc/charger` 等节点的转接后，此模块即可卸载。触发时刻的外因未完全明确（实测在刷机数小时后开始出现，之后跨重启持续），**任何使用该移植包的设备都可能遇到**。
 
-### Q8 · 机型身份的三方冲突：微信不能双端 / 小布报「无法兼容」/ 三角洲丢 144 帧
+### Q8 · 机型身份的多方冲突：定制应用白名单 / 品牌校验 / 游戏适配表
 
-**背景**：本移植包原始身份是 `OPD2413`（一加平板 2 Pro）。为恢复三角洲「144 帧 + 高清」需要把机型改成 `TB322FC`（见阶段 5），但这会连锁触发另两个问题——三个消费者对身份字段的约束互斥：
+**背景**：本移植包原始身份是 `OPD2413`（一加平板 2 Pro）。为恢复三角洲「144 帧 + 高清」需要把 model 改成 `TB322FC`（见阶段 5）。围绕 `brand` / `model` 两个字段，存在多方消费者，约束互斥：
 
 | 需求方 | 依赖字段 | 要求 | 冲突表现 |
 |---|---|---|---|
 | 三角洲 144+高清 | `ro.product.model`（实测**只认主域**） | `= TB322FC` | model 改回 OPD2413 即丢 144 |
-| 微信 手机+平板双端 | `brand` + `model` 组合自洽（设备名 = "品牌-型号"，服务端校验组合） | `TB322FC` 需配 `Lenovo` | `OnePlus-TB322FC` 被拒 → 不能双端登录 |
-| 小布助手 | `brand` 必须 OPPO 系（heytap `BrandEnvActivity` 品牌校验） | `= OnePlus` | brand=Lenovo 时启动报「无法兼容当前设备」 |
+| heytap `BrandEnvSdk` 系应用（小布 / 主题商店 / 音乐 / 视频 / 阅读 / 浏览器 / OPPO 商城 / 我的一加） | `Build.BRAND`（zygote 缓存）或实时 `ro.product.brand` | 见下方 MD5 白名单 | brand=Lenovo 时集体报「为定制应用，无法兼容当前设备」 |
+| 微信 手机+平板双端（历史问题） | `brand` + `model` 组合（服务端校验） | 曾记录 `TB322FC` 须配 `Lenovo` | v1.1 时期出现过 `OnePlus-TB322FC` 不能双端；**2026-10-05 复测未复现**（见下） |
 
-**演进中的失败方案（供参考，别重复踩）**：
+**BrandEnvSdk 校验机制（反编译实测，`com.heytap.msp.sdk.brand`）**：
 
-| 方案 | brand+model | 微信 | 小布 | 三角洲 |
+```
+// 判定核心（a.a.f()）:
+String md5 = MD5(Build.BRAND.toUpperCase());
+return md5.equalsIgnoreCase("67843bc0e7e7b09cc369beabf05e9d30")   // OPPO
+    || md5.equalsIgnoreCase("60c89617499cd5202c71062b5f22087d")   // REALME
+    || md5.equalsIgnoreCase("5836b6c1f251363d1ebc8e1c2e1fb9b9");  // ONEPLUS
+```
+
+- 品牌白名单只有三个：**OPPO / REALME / ONEPLUS**，其余一律弹「无法兼容当前设备」并 `return false`
+- **两条读取路径**（决定修复方式，排障时别被误导）：
+  - `Build.BRAND`——**zygote 启动时缓存**，应用进程 fork 后继承该固定值 → 必须**开机阶段**（post-fs-data）品牌就是白名单值；**运行时 resetprop 对读这条路径的应用无效**（音乐/视频/阅读/浏览器等实测）
+  - 实时 `ro.product.brand`（UserCenter SDK 的 `PhoneProperty` / `SystemPropertyUtils.get`）→ **运行时 resetprop 即生效**（主题商店实测）
+- 任何"改属性后重启应用进程"的运行时验证只能覆盖后者；前者必须整机重启才生效
+
+**演进史（供参考，别重复踩）**：
+
+| 方案 | brand+model | 微信双端 | ColorOS 系应用 | 三角洲 |
 |---|---|---|---|---|
-| 混合版 v1.1 | OnePlus + TB322FC | ✗ | ✓ | ✓ |
-| 品牌回退 v2.0 | Lenovo + TB322FC | ✓ | ✗ | ✓ |
+| 混合版 v1.1 | OnePlus + TB322FC | ✗（当时实测） | ✓ | ✓ |
+| 品牌回退 v2.0/v2.1 | Lenovo + TB322FC | ✓ | ✗（当时只发现小布、用 LSPosed 单独修；其余七个后被发现集体被拒） | ✓ |
 | 域分离 v3.0（TB322FC 藏 vendor/device 域） | OnePlus + OPD2413 | ✓ | ✓ | ✗ |
+| **v3.1 定稿** | **OnePlus + TB322FC** | **✓（2026-10-05 复测）** | **✓（八应用实测全开）** | **✓** |
 
-**最终方案（五项全绿，已实测）**：
+**v3.1 定稿方案（全绿，2026-10-05 实测）**：
 
-1. 身份模块用 [`modules/tb322fc_identity`](../modules/tb322fc_identity/) **v2.0**：`brand=Lenovo` + `model/device=TB322FC` + `manufacturer=OnePlus` → 微信双端 ✓、三角洲 144+高清 ✓
-2. 小布用 [`modules/y700-brandfix-lsposed`](../modules/y700-brandfix-lsposed/)：一个 LSPosed 模块，**仅在 heytap / ColorOS / AIUnit 进程内**把 `Build.BRAND/MANUFACTURER` 伪装为 `OnePlus`（作用域只勾小布系）→ 小布 ✓
-3. 检测环境无新增暴露（作用域外进程感知不到 LSPosed；Momo / Ruru / MemoryDetector 实测全绿）
+1. 身份模块 [`modules/tb322fc_identity`](../modules/tb322fc_identity/) **v3.1**：`brand/manufacturer=OnePlus` + `model/device=TB322FC` + `ro.config.zui.devicetype=PAD` → ColorOS 八应用、微信双端、小布、三角洲 144+高清全部正常
+2. 复测说明：v2.x 期间为解决微信双端把 brand 整体回退成 Lenovo，代价是全部 heytap 系应用被 BrandEnv 白名单拒绝（当时只发现了小布一个；主题商店、音乐、视频、阅读、浏览器、OPPO 商城、我的一加共七个是后来才被发现的）。改回 OnePlus 后 **微信双端未复现问题**——v1.1 时期「OnePlus-TB322FC 被拒」的归因在当前环境/微信版本下不再成立（无法确证当时成因，如实记录）
+3. [`modules/y700-brandfix-lsposed`](../modules/y700-brandfix-lsposed/)（LSPosed 小布伪装）在 v3.1 下**冗余**（全局 brand 已是 OnePlus），保留仅供回退 v2.x 身份时使用
 
-**通用经验**：机型身份是**多消费者字段**——改机型前先确认每个消费者（游戏适配表、通信 App 的设备验证、厂商服务品牌校验）各自读哪几个字段，再设计"统一主身份 + 进程级隔离"的组合，比单点改字段更稳。
+**本次定位的手法速查**：
+
+- `adb shell getprop` 全量对照 + `dumpsys activity activities | grep topResumedActivity`（看前台是不是弹窗类 Activity，本次即 `BrandEnvActivity`）
+- `uiautomator dump` + grep 文案（微信等加固应用会 dump 失败，需截图）
+- 运行时 `resetprop` + `am force-stop` 快速二分定位（只对"实时读取"路径有效，见上文机制）
+- APK 反编译（androguard，纯 Python 无需 JDK）：搜文案字符串 / 属性名字符串的引用，直接定位判定代码
+
+**通用经验**：机型身份是**多消费者字段**——改机型前先确认每个消费者（游戏适配表、通信 App 的设备验证、厂商服务品牌校验）各自读哪几个字段、走哪条读取路径（缓存 or 实时），再设计"统一主身份 +（必要时）进程级隔离"的组合，比单点改字段更稳。
 
 ---
 

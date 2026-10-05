@@ -1,14 +1,23 @@
-# Hybrid identity v2 (brandfix):
-# - model/device = TB322FC (Lenovo model strings) for per-model game graphics profiles
-# - brand = Lenovo so the brand-model pair is self-consistent (WeChat reads BRAND-MODEL
-#   to derive the device name; "OnePlus-TB322FC" was rejected -> no multi-device login)
-# - manufacturer = OnePlus for ColorOS brand-checked services (XiaoBu BrandEnvActivity)
+# Hybrid identity v3.1 (brandenvfix):
+# Heytap BrandEnvSdk gate (decompile-verified): MD5(Build.BRAND.toUpperCase()) must be
+# one of OPPO / REALME / ONEPLUS. MD5: OPPO=67843bc0e7e7b09cc369beabf05e9d30,
+# REALME=60c89617499cd5202c71062b5f22087d, ONEPLUS=5836b6c1f251363d1ebc8e1c2e1fb9b9.
+# Two read paths:
+#  - Build.BRAND (cached by zygote at boot): Music/Video/Reader/Browser/OnePlusMember
+#  - live ro.product.brand via SystemProperties: ThemeStore/UserCenter apps
+# brand=OnePlus satisfies both (runtime resetprop only fixes the live-read path).
+# - model/device = TB322FC (Lenovo model strings) for per-model game graphics (Delta Force 144+HD)
+# - manufacturer = OnePlus for ColorOS brand-checked services
+# - ro.config.zui.devicetype = PAD for QQ pad detection
+# Verified 2026-10-05: ThemeStore/Music/Video/Reader/Browser/Store/OnePlusMember/XiaoBu
+# all open; WeChat multi-device + Delta Force 144+HD checked OK by user.
 ro.product.model=TB322FC
-ro.product.brand=Lenovo
+ro.product.brand=OnePlus
 ro.product.device=TB322FC
 ro.product.manufacturer=OnePlus
 ro.product.name=OP615EL1
 ro.vendor.product.model=TB322FC
-ro.vendor.product.brand=Lenovo
+ro.vendor.product.brand=OnePlus
 ro.vendor.product.device=TB322FC
 ro.vendor.product.name=OP615EL1
+ro.config.zui.devicetype=PAD
