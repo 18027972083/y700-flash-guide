@@ -4,6 +4,7 @@
 
 > 本仓库不包含任何固件、工具或镜像二进制；所有素材的获取渠道见 [docs/flash-guide.md](docs/flash-guide.md) 第 8 节。
 > 2026-10-11 新增：[docs/dual-flash-log-20261011.md](docs/dual-flash-log-20261011.md) —— 双机实录：二代 TB320FC 刷 ColorOS 16 + 四代 TB322FC 换澎湃 OS 4，含身份数据分区覆盖的发现与还原、人脸 hat_valid 排查实录、隐藏环境部署与 Hunter 过检调优。
+> 2026-10-11 新增：[docs/165hz-unlock.md](docs/165hz-unlock.md) —— 澎湃 OS 4 把全局刷新率锁在 120Hz 的三层来源定位（Settings 键 → PowerKeeper persist 属性 → 开机默认锁），以及用"persist 属性变化事件"触发 MIUI 策略重评解锁 165Hz 的 KSU 模块、验证命令与回退方法。
 
 ## 背景
 
@@ -31,8 +32,11 @@ y700-flash-guide/
     │                         #   白名单 + model/device=TB322FC 保三角洲 144；微信双端实测正常）
     ├── unpause_charge/       # 充电暂停修复 KSU 模块（已实测验证：watchdog 对抗移植包的
     │                         #   充电保护误触发，见排障手册 Q7；action 按钮可免重启启动）
-    └── y700-brandfix-lsposed/# LSPosed 小布品牌伪装模块（源码 + 构建脚本 + 预编译 APK；
-                              #   v3.1 身份下已冗余，仅回退 v2.x 联想身份时使用，见 Q8）
+    ├── y700-brandfix-lsposed/# LSPosed 小布品牌伪装模块（源码 + 构建脚本 + 预编译 APK；
+    │                         #   v3.1 身份下已冗余，仅回退 v2.x 联想身份时使用，见 Q8）
+    └── y700_os4_max_fps/     # 165Hz 全局解锁 KSU 模块（开机自动触发 MIUI 智能省电策略
+                              #   重评解除 120Hz 锁 + 钉死首选显示档；实测桌面/应用稳定 165，
+                              #   详见 docs/165hz-unlock.md）
 ```
 
 ## 脚本用法
@@ -49,7 +53,7 @@ python scripts/dl_official.py --url <firmware-url> --out TB322FC_official.7z
 ```
 
 机型身份模块的原理与安装方式见文档阶段 5。
-> 2026-10-11 双机实录补充：身份模块的 model/device=TB322FC 伪装（保三角洲 144 帧逻辑）在澎湃 OS 4 上预期同样有效——KSU 的默认卸载模块只移除 App 视野内的文件挂载，system.prop 级属性伪装是全局生效的；尚未在 OS4 实测，欢迎验证。
+> 2026-10-11 双机实录补充：身份模块的 system.prop 层伪装在澎湃 OS 4 上已实测全局生效——KSU 的默认卸载模块只移除 App 视野内的文件挂载，属性伪装不受影响；OS4 专用变体（`tb322fc_identity_os4`）把身份改为 iQOO Pad Ultra（iPA2691/DPD2605）用于试探三角洲 165+高画质的机型白名单，游戏内效果待验证。刷新率被系统压 120 的问题另行处理，见 [docs/165hz-unlock.md](docs/165hz-unlock.md)。
 
 ## 免责声明
 
