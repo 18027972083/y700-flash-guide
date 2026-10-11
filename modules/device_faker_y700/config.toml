@@ -1,0 +1,19 @@
+# Y700 四代（澎湃OS4）按应用机型伪装配置
+# 架构：全局 = 原生小米平板 8 Pro（piano），微信/小米生态/QQ 读原生；
+#       仅三角洲行动通过 device_faker 读 iQOO Pad Ultra（165+高画质白名单）。
+# 改完配置只需强停并重开对应应用，无需重启系统。
+
+[[apps]]
+package = "com.tencent.tmgp.dfm"
+model = "iPA2691"
+device = "DPD2605"
+product = "DPD2605"
+brand = "iQOO"
+manufacturer = "iQOO"
+marketname = "iQOO Pad Ultra"
+
+# 备选：若 iPA2691 未放开 165+高画质，把上面 model/device/product 换成
+# 一加15（社区给三角洲的默认白名单机型）：
+#   model = "PLK110"
+#   device = "PLK110"
+#   product = "PLK110"
