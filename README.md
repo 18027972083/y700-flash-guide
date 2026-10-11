@@ -3,6 +3,7 @@
 联想拯救者 Y700 四代（TB322FC）刷 ColorOS 16 移植版的**完整流程记录**与**自研验证脚本**。
 
 > 本仓库不包含任何固件、工具或镜像二进制；所有素材的获取渠道见 [docs/flash-guide.md](docs/flash-guide.md) 第 8 节。
+> 2026-10-11 新增：[docs/dual-flash-log-20261011.md](docs/dual-flash-log-20261011.md) —— 双机实录：二代 TB320FC 刷 ColorOS 16 + 四代 TB322FC 换澎湃 OS 4，含身份数据分区覆盖的发现与还原、人脸 hat_valid 排查实录、隐藏环境部署与 Hunter 过检调优。
 
 ## 背景
 
@@ -16,8 +17,11 @@ TB322FC 在 ZUXOS 1.5.10.259 之后常规解锁路径全部失效（unlock 分�
 ```
 y700-flash-guide/
 ├── docs/
-│   └── flash-guide.md        # 推荐流程 + 排障手册（脱敏版）：
-│                             #   阶段 0-5 干净流程，实测踩坑集中在第 6 节 Q1-Q8
+│   ├── flash-guide.md        # 推荐流程 + 排障手册（脱敏版）：
+│   │                         #   阶段 0-5 干净流程，实测踩坑集中在第 6 节 Q1-Q8
+│   └── dual-flash-log-20261011.md
+│                             # 双机实录：二代 ColorOS16（含 SN 覆盖还原）
+│                             #   + 四代 澎湃OS4（root/隐藏环境/人脸排查）
 ├── scripts/                  # 自研脚本，纯标准库，无第三方依赖
 │   ├── check_sha256.py       # 对照 SHA256SUMS.txt 全包校验（支持 zip 免解压、断点续算）
 │   ├── verify_vbmeta.py      # 解析 AVB 描述符并逐条对实际镜像验哈希（排障核心）
@@ -45,6 +49,7 @@ python scripts/dl_official.py --url <firmware-url> --out TB322FC_official.7z
 ```
 
 机型身份模块的原理与安装方式见文档阶段 5。
+> 2026-10-11 双机实录补充：身份模块的 model/device=TB322FC 伪装（保三角洲 144 帧逻辑）在澎湃 OS 4 上预期同样有效——KSU 的默认卸载模块只移除 App 视野内的文件挂载，system.prop 级属性伪装是全局生效的；尚未在 OS4 实测，欢迎验证。
 
 ## 免责声明
 
