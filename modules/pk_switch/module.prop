@@ -1,0 +1,6 @@
+id=pk_switch
+name=PowerKeeper一键开关
+version=1.0
+versionCode=1
+author=ZCode
+description=一键切换 PowerKeeper 状态。禁用=三角洲等游戏跑满165帧（性能/省电模式开关与MIUI温控策略暂时不可用）；启用=性能模式/温控/省电策略回归（三角洲会被云端策略压回60帧）。用法：KernelSU 管理器里点本模块的「操作」按钮，秒级生效无需重启。安装后需重启一次激活。
