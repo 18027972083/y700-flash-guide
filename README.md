@@ -38,8 +38,10 @@ y700-flash-guide/
     ├── y700_os4_max_fps/     # 165Hz 全局解锁 KSU 模块（开机自动触发 MIUI 智能省电策略
     │                         #   重评解除 120Hz 锁 + 钉死首选显示档；实测桌面/应用稳定 165，
     │                         #   详见 docs/165hz-unlock.md）
-    └── device_faker_y700/    # Device_Faker 定制配置（仅三角洲→iQOO Pad Ultra；微信双登/
-                              #   小米生态走原生 piano 身份），详见 docs/per-app-device-identity.md
+    ├── device_faker_y700/    # Device_Faker 定制配置（仅三角洲→iQOO Pad Ultra；微信双登/
+    │                         #   小米生态走原生 piano 身份），详见 docs/per-app-device-identity.md
+    └── pk_switch/            # PowerKeeper 一键切换（KSU 操作按钮）：高帧模式=禁用PK跑165
+                              #   ↔ 日常模式=启用PK换回性能/省电开关，见 per-app 文档
 ```
 
 ## 脚本用法
