@@ -107,3 +107,21 @@ adb shell su -c "pm enable com.miui.powerkeeper"
 | 三角洲伪装 | device_faker 删除 `[[apps]]` 条目或卸载模块 |
 | 全局 iQOO 身份 | `ksud module enable tb322fc_identity_os4` + 重启 |
 | PowerKeeper | `pm enable com.miui.powerkeeper` |
+
+## 附：身份切换后遗症——小爱同学"登录状态已过期"+唤醒词设不了
+
+身份反复切换（iQOO ↔ 原生）期间，小米服务端会把设备的旧会话作废，但应用本地还缓存着
+旧令牌。表现：小米账号明明在线（`dumpsys account` 正常、时钟也准），小爱同学对话却弹
+"登录状态已过期"，同时**语音唤醒无法录入**（唤醒词录入依赖登录态，两个症状同根）。
+
+解法（实测一次恢复两者）：
+
+```bash
+adb shell su -c "am force-stop com.miui.voiceassist; pm clear com.miui.voiceassist"
+# 重开小爱同学会自动经小米账号重新拉令牌；唤醒词需重新录一次
+adb shell am force-stop com.xiaomi.xmsf   # 可选：顺带重启小米服务框架
+```
+
+排查时排除项（供参考）：设备时钟与 PC 精确一致（时钟偏差是"令牌过期"最常见的伪因）、
+小米账号在位、SoundTrigger 服务正常但已注册声学模型为空（唤醒词未注册的典型状态）。
+
